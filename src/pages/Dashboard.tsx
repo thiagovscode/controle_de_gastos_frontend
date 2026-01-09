@@ -72,7 +72,13 @@ const DashboardPage: React.FC = () => {
         categoriasLista,
         tagsLista
       ] = await Promise.all([
-        dashboardService.getResumoDashboard(ano, mes),
+        dashboardService.getResumoDashboard(
+          ano,
+          mes,
+          categoriaFiltro || undefined,
+          undefined, // cartaoUid - podemos adicionar depois
+          tipoPagamentoFiltro || undefined
+        ),
         transacaoService.getSaldo(),
         transacaoService.getComprasPendentes(),
         analisesService.gastosPorCategoria(ano, mes),

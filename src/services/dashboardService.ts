@@ -31,10 +31,13 @@ export const dashboardService = {
     await api.delete(`/dashboard/metas/${uid}`);
   },
 
-  getResumoDashboard: async (ano?: number, mes?: number) => {
+  getResumoDashboard: async (ano?: number, mes?: number, categoriaUid?: string, cartaoUid?: string, tipo?: string) => {
     const params = new URLSearchParams();
     if (ano) params.append('ano', ano.toString());
     if (mes) params.append('mes', mes.toString());
+    if (categoriaUid) params.append('categoriaUid', categoriaUid);
+    if (cartaoUid) params.append('cartaoUid', cartaoUid);
+    if (tipo) params.append('tipo', tipo);
 
     const response = await api.get(`/dashboard/resumo?${params}`);
     return response.data;

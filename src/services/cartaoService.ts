@@ -7,6 +7,11 @@ export const cartaoService = {
     return response.data;
   },
 
+  listarTodos: async (): Promise<Cartao[]> => {
+    const response = await api.get('/cartoes/todos');
+    return response.data;
+  },
+
   buscar: async (uid: string): Promise<Cartao> => {
     const response = await api.get(`/cartoes/${uid}`);
     return response.data;

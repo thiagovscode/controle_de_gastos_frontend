@@ -17,6 +17,19 @@ const Transacoes: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  // Estados de filtro
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroCartao, setFiltroCartao] = useState('');
+  const [filtroTag, setFiltroTag] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
+  const [filtroDataInicio, setFiltroDataInicio] = useState('');
+  const [filtroDataFim, setFiltroDataFim] = useState('');
+  const [filtroDescricao, setFiltroDescricao] = useState('');
+  const [showOcultas, setShowOcultas] = useState(false);
+
+  // Transações filtradas
+  const [transacoesFiltradas, setTransacoesFiltradas] = useState<Transacao[]>([]);
+
   const [formData, setFormData] = useState<TransacaoRequest>({
     valor: 0,
     data: format(new Date(), 'yyyy-MM-dd'),
@@ -29,6 +42,69 @@ const Transacoes: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    aplicarFiltros();
+  }, [transacoes, filtroCategoria, filtroCartao, filtroTag, filtroTipo, filtroDataInicio, filtroDataFim, filtroDescricao, showOcultas]);
+
+  const aplicarFiltros = () => {
+    let filtradas = [...transacoes];
+
+    // Filtro de categoria
+    if (filtroCategoria) {
+      filtradas = filtradas.filter(t => t.categoria.uid === filtroCategoria);
+    }
+
+    // Filtro de cartão
+    if (filtroCartao) {
+      filtradas = filtradas.filter(t => t.cartao?.uid === filtroCartao);
+    }
+
+    // Filtro de tag
+    if (filtroTag) {
+      filtradas = filtradas.filter(t => t.tags?.some(tag => tag.uid === filtroTag));
+    }
+
+    // Filtro de tipo (Receita/Despesa)
+    if (filtroTipo) {
+      filtradas = filtradas.filter(t => t.categoria.tipo === filtroTipo);
+    }
+
+    // Filtro de descrição
+    if (filtroDescricao) {
+      filtradas = filtradas.filter(t =>
+        t.descricao?.toLowerCase().includes(filtroDescricao.toLowerCase())
+      );
+    }
+
+    // Filtro de data início
+    if (filtroDataInicio) {
+      filtradas = filtradas.filter(t => new Date(t.data) >= new Date(filtroDataInicio));
+    }
+
+    // Filtro de data fim
+    if (filtroDataFim) {
+      filtradas = filtradas.filter(t => new Date(t.data) <= new Date(filtroDataFim));
+    }
+
+    // Filtro de transações ocultas
+    if (!showOcultas) {
+      filtradas = filtradas.filter(t => !t.oculta);
+    }
+
+    setTransacoesFiltradas(filtradas);
+  };
+
+  const limparFiltros = () => {
+    setFiltroCategoria('');
+    setFiltroCartao('');
+    setFiltroTag('');
+    setFiltroTipo('');
+    setFiltroDataInicio('');
+    setFiltroDataFim('');
+    setFiltroDescricao('');
+    setShowOcultas(false);
+  };
 
   const loadData = async () => {
     try {
@@ -172,6 +248,110 @@ const Transacoes: React.FC = () => {
         </div>
       </div>
 
+      {/* Filtros */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Filtros</h3>
+          <button
+            onClick={limparFiltros}
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Limpar Filtros
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Filtro Categoria */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Categoria
+            </label>
+            <select
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Todas</option>
+              {categorias.map((categoria) => (
+                <option key={categoria.uid} value={categoria.uid}>
+                  {categoria.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro Cartão */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cartão
+            </label>
+            <select
+              value={filtroCartao}
+              onChange={(e) => setFiltroCartao(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Todos</option>
+              {cartoes.map((cartao) => (
+                <option key={cartao.uid} value={cartao.uid}>
+                  {cartao.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro Tag */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tag
+            </label>
+            <select
+              value={filtroTag}
+              onChange={(e) => setFiltroTag(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Todas</option>
+              {tags.map((tag) => (
+                <option key={tag.uid} value={tag.uid}>
+                  {tag.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro Tipo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tipo
+            </label>
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Todos</option>
+              <option value="Receita">Receita</option>
+              <option value="Despesa">Despesa</option>
+            </select>
+          </div>
+
+          {/* Filtro Data Início */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Início
+            </label>
+            <input
+              type="date"
+              value={filtroDataInicio}
+              onChange={(e) => setFiltroDataInicio(e.target.value)}
+              className="input-field"
+            />
+          </div>
+
+          {/* Filtro Data Fim */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Fim
+            </label>
       {/* Lista de Transações */}
       <div className="card">
         <div className="overflow-x-auto">
@@ -205,7 +385,7 @@ const Transacoes: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {transacoes.map((transacao) => (
+              {transacoesFiltradas.map((transacao) => (
                 <tr key={transacao.uuid} className={`hover:bg-gray-50 ${transacao.oculta ? 'bg-gray-100 opacity-60' : ''}`}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {format(new Date(transacao.data), 'dd/MM/yyyy')}
