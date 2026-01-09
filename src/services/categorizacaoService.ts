@@ -56,5 +56,10 @@ export const categorizacaoService = {
     const response = await api.post('/config/categorizacao/testar', { descricao });
     return response.data;
   },
+
+  recategorizarTransacoes: async (): Promise<{ message: string; recategorizadas: number }> => {
+    const response = await api.post('/config/categorizacao/recategorizar');
+    return response.data;
+  },
 };
 

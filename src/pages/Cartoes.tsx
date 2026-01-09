@@ -44,12 +44,21 @@ const Cartoes: React.FC = () => {
   useEffect(() => {
     loadCartoes();
   }, [showInativos]);
-      await cartaoService.criar(formData);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingCartao) {
+        await cartaoService.atualizar(editingCartao.uid, formData);
+      } else {
+        await cartaoService.criar(formData);
+      }
       setShowModal(false);
       resetForm();
+      setEditingCartao(null);
       loadCartoes();
     } catch (error) {
-      console.error('Erro ao criar cartão:', error);
+      console.error('Erro ao salvar cartão:', error);
     }
   };
 
@@ -96,6 +105,43 @@ const Cartoes: React.FC = () => {
     } catch (error) {
       console.error('Erro ao registrar pagamento:', error);
     }
+  };
+
+  const handleAtivar = async (uid: string) => {
+    if (window.confirm('Deseja ativar este cartão?')) {
+      try {
+        await cartaoService.ativar(uid);
+        loadCartoes();
+        alert('Cartão ativado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao ativar cartão:', error);
+        alert('Erro ao ativar cartão');
+      }
+    }
+  };
+
+  const handleInativar = async (uid: string) => {
+    if (window.confirm('Deseja inativar este cartão?')) {
+      try {
+        await cartaoService.inativar(uid);
+        loadCartoes();
+        alert('Cartão inativado com sucesso!');
+      } catch (error) {
+        console.error('Erro ao inativar cartão:', error);
+        alert('Erro ao inativar cartão');
+      }
+    }
+  };
+
+  const handleEdit = (cartao: Cartao) => {
+    setEditingCartao(cartao);
+    setFormData({
+      nome: cartao.nome,
+      diaFechamento: cartao.diaFechamento,
+      diaVencimento: cartao.diaVencimento,
+      limite: cartao.limite,
+    });
+    setShowModal(true);
   };
 
   if (loading) {
@@ -154,6 +200,15 @@ const Cartoes: React.FC = () => {
                 </h3>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => handleEdit(cartao)}
+                  className="text-blue-600 hover:text-blue-900"
+                  title="Editar cartão"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
                 {cartao.ativa ? (
                   <button
                     onClick={() => handleInativar(cartao.uid)}
@@ -246,11 +301,13 @@ const Cartoes: React.FC = () => {
         ))}
       </div>
 
-      {/* Modal de Criar Cartão */}
+      {/* Modal de Criar/Editar Cartão */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="card max-w-md w-full">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Novo Cartão</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              {editingCartao ? 'Editar Cartão' : 'Novo Cartão'}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -312,7 +369,7 @@ const Cartoes: React.FC = () => {
 
               <div className="flex gap-2 pt-4">
                 <button type="submit" className="btn-primary flex-1">
-                  Salvar
+                  {editingCartao ? 'Atualizar' : 'Criar'}
                 </button>
                 <button
                   type="button"

@@ -13,6 +13,7 @@ const Metas: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [editingMeta, setEditingMeta] = useState<MetaCofre | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -71,7 +72,7 @@ const Metas: React.FC = () => {
     e.preventDefault();
     try {
       setError('');
-      await metasService.criar({
+      const metaData = {
         nome: formData.nome,
         descricao: formData.descricao,
         valorObjetivo: parseFloat(formData.valorObjetivo),
@@ -79,13 +80,22 @@ const Metas: React.FC = () => {
         diaDeposito: parseInt(formData.diaDeposito),
         dataInicio: formData.dataInicio || undefined,
         dataLimite: formData.dataLimite || undefined,
-      });
-      showMessage('Meta criada com sucesso!');
+      };
+
+      if (editingMeta) {
+        await metasService.atualizar(editingMeta.uid, metaData);
+        showMessage('Meta atualizada com sucesso!');
+      } else {
+        await metasService.criar(metaData);
+        showMessage('Meta criada com sucesso!');
+      }
+
       setShowModal(false);
       resetForm();
+      setEditingMeta(null);
       loadData();
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Erro ao criar meta');
+      setError(error.response?.data?.message || (editingMeta ? 'Erro ao atualizar meta' : 'Erro ao criar meta'));
     }
   };
 
@@ -133,6 +143,21 @@ const Metas: React.FC = () => {
     }
   };
 
+  const handleEdit = (meta: MetaCofre) => {
+    setEditingMeta(meta);
+    setFormData({
+      nome: meta.nome,
+      descricao: meta.descricao || '',
+      valorObjetivo: meta.valorObjetivo.toString(),
+      valorMensal: meta.valorMensal.toString(),
+      diaDeposito: meta.diaDeposito.toString(),
+      dataInicio: meta.dataInicio || '',
+      dataLimite: meta.dataLimite || '',
+    });
+    setShowModal(true);
+    if (showDetailModal) setShowDetailModal(false);
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
@@ -143,6 +168,7 @@ const Metas: React.FC = () => {
       dataInicio: '',
       dataLimite: '',
     });
+    setEditingMeta(null);
   };
 
   const showMessage = (msg: string) => {
@@ -489,7 +515,7 @@ const Metas: React.FC = () => {
 
               <div className="flex gap-2 pt-4">
                 <button type="submit" className="btn-primary flex-1">
-                  Criar Meta
+                  {editingMeta ? 'Atualizar Meta' : 'Criar Meta'}
                 </button>
                 <button
                   type="button"
@@ -554,7 +580,7 @@ const Metas: React.FC = () => {
 
               {error && <p className="text-red-600 text-sm">{error}</p>}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-4">
                 <button type="submit" className="btn-primary flex-1">
                   Confirmar Depósito
                 </button>
@@ -684,6 +710,12 @@ const Metas: React.FC = () => {
                   💵 Fazer Depósito
                 </button>
               )}
+              <button
+                onClick={() => handleEdit(selectedMeta)}
+                className="btn-secondary flex-1 text-blue-600 hover:bg-blue-50"
+              >
+                ✏️ Editar Meta
+              </button>
               <button
                 onClick={() => handleDelete(selectedMeta.uid)}
                 className="btn-secondary flex-1 text-red-600 hover:bg-red-50"

@@ -27,6 +27,16 @@ export const cartaoService = {
     return response.data;
   },
 
+  atualizar: async (uid: string, data: {
+    nome: string;
+    diaFechamento: number;
+    diaVencimento: number;
+    limite: number;
+  }): Promise<Cartao> => {
+    const response = await api.put(`/cartoes/${uid}`, data);
+    return response.data;
+  },
+
   consultarLimite: async (uid: string) => {
     const response = await api.get(`/cartoes/${uid}/limite`);
     return response.data;

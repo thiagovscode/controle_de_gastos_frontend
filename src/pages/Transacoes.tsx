@@ -209,9 +209,10 @@ const Transacoes: React.FC = () => {
         setShowImportModal(false);
         loadData();
         alert('Importação realizada com sucesso!');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao importar CSV:', error);
-        alert('Erro ao importar arquivo');
+        const errorMessage = error.response?.data?.message || error.message || 'Erro ao importar arquivo';
+        alert(`Erro na importação: ${errorMessage}`);
       }
     }
   };
@@ -352,6 +353,16 @@ const Transacoes: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Data Fim
             </label>
+            <input
+              type="date"
+              value={filtroDataFim}
+              onChange={(e) => setFiltroDataFim(e.target.value)}
+              className="input-field"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Lista de Transações */}
       <div className="card">
         <div className="overflow-x-auto">
@@ -624,8 +635,34 @@ const Transacoes: React.FC = () => {
       {/* Modal de Importação */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="card max-w-md w-full">
+          <div className="card max-w-lg w-full">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Importar CSV</h2>
+
+            {/* Instruções do formato */}
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2">📋 Formato do CSV:</h3>
+              <p className="text-xs text-blue-800 mb-2">
+                <strong>⚠️ IMPORTANTE:</strong> A ordem das colunas deve ser respeitada
+              </p>
+              <div className="bg-blue-100 p-2 rounded mb-2">
+                <p className="text-xs text-blue-900 font-mono">
+                  <strong>1ª coluna:</strong> Data (YYYY-MM-DD)<br/>
+                  <strong>2ª coluna:</strong> Lançamento (descrição)<br/>
+                  <strong>3ª coluna:</strong> Valor (números)
+                </p>
+              </div>
+              <p className="text-xs text-blue-800 mb-2">
+                <strong>Exemplo de linha:</strong><br/>
+                <code className="bg-blue-100 px-1 rounded">2024-01-15,Compra supermercado,125.50</code>
+              </p>
+              <div className="text-xs text-blue-700">
+                <p>• <strong>Cabeçalho:</strong> Primeira linha será ignorada (pode colocar qualquer coisa)</p>
+                <p>• <strong>Separador:</strong> Vírgula (,) obrigatória</p>
+                <p>• <strong>Valor:</strong> Use ponto ou vírgula como decimal</p>
+                <p>• <strong>Encoding:</strong> UTF-8 recomendado</p>
+              </div>
+            </div>
+
             <form onSubmit={handleImport} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

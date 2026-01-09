@@ -34,6 +34,7 @@ export interface Cartao {
   diaFechamento: number;
   diaVencimento: number;
   limite: number;
+  ativa: boolean;
   limiteInfo?: {
     limiteTotal: number;
     valorComprometido: number;

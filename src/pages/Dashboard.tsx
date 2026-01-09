@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardService } from '../services/dashboardService';
 import { transacaoService } from '../services/transacaoService';
-import { analisesService, CategoriaResumo, TendenciaGasto, GastoInvisivel } from '../services/analisesService';
+import { analisesService, CategoriaResumo, TendenciaGasto, GastoInvisivel, EvolucaoMensal } from '../services/analisesService';
 import { categoriaService } from '../services/categoriaService';
 import { tagService } from '../services/tagService';
 import { Dashboard, Categoria, Tag } from '../types';
-import { Line } from 'react-chartjs-2';
+import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -23,6 +24,7 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -35,6 +37,7 @@ const DashboardPage: React.FC = () => {
   const [saldoPendente, setSaldoPendente] = useState<number>(0);
   const [categorias, setCategorias] = useState<CategoriaResumo[]>([]);
   const [tendencia, setTendencia] = useState<TendenciaGasto[]>([]);
+  const [evolucaoMensal, setEvolucaoMensal] = useState<EvolucaoMensal[]>([]);
   const [gastosInvisiveis, setGastosInvisiveis] = useState<GastoInvisivel | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -68,21 +71,17 @@ const DashboardPage: React.FC = () => {
         comprasParceladas,
         categoriasData,
         tendenciaData,
+        evolucaoData,
         invisiveisData,
         categoriasLista,
         tagsLista
       ] = await Promise.all([
-        dashboardService.getResumoDashboard(
-          ano,
-          mes,
-          categoriaFiltro || undefined,
-          undefined, // cartaoUid - podemos adicionar depois
-          tipoPagamentoFiltro || undefined
-        ),
+        dashboardService.obter(ano, mes),
         transacaoService.getSaldo(),
         transacaoService.getComprasPendentes(),
         analisesService.gastosPorCategoria(ano, mes),
         analisesService.tendenciaGastos(ano),
+        analisesService.evolucaoMensal(ano),
         analisesService.gastosInvisiveis(ano, mes, 20),
         categoriaService.listar(),
         tagService.listar()
@@ -92,6 +91,7 @@ const DashboardPage: React.FC = () => {
       setSaldo(saldoData.saldo);
       setCategorias(categoriasData);
       setTendencia(Array.isArray(tendenciaData) ? tendenciaData : []);
+      setEvolucaoMensal(evolucaoData);
       setGastosInvisiveis(invisiveisData);
       setListaCategories(categoriasLista.filter((c: Categoria) => c.tipo === 'Despesa'));
       setListaTags(tagsLista);
@@ -506,6 +506,182 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Gráfico de Evolução Mensal Receita vs Despesa */}
+      {evolucaoMensal.length > 0 && (
+        <div className="card">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">💰 Evolução Receita vs Despesa</h2>
+          <p className="text-sm text-gray-600 mb-4">Acompanhe a evolução mensal de receitas e despesas</p>
+          <div style={{ height: '350px' }}>
+            <Line
+              data={{
+                labels: evolucaoMensal.map(e => e.periodo),
+                datasets: [
+                  {
+                    label: 'Receita',
+                    data: evolucaoMensal.map(e => e.receita),
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: false,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                  },
+                  {
+                    label: 'Despesa',
+                    data: evolucaoMensal.map(e => e.despesa),
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: false,
+                    tension: 0.4,
+                    yAxisID: 'y',
+                  },
+                  {
+                    label: '% Receita/Despesa',
+                    data: evolucaoMensal.map(e => e.percentual),
+                    borderColor: 'rgb(79, 70, 229)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    fill: false,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    borderDash: [5, 5],
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                  mode: 'index' as const,
+                  intersect: false,
+                },
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: 'top' as const,
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: (context: any) => {
+                        if (context.dataset.label === '% Receita/Despesa') {
+                          return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                        }
+                        return `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`;
+                      },
+                    },
+                  },
+                },
+                scales: {
+                  y: {
+                    type: 'linear' as const,
+                    display: true,
+                    position: 'left' as const,
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Valores (R$)',
+                    },
+                    ticks: {
+                      callback: (value: any) => formatCurrency(value),
+                    },
+                  },
+                  y1: {
+                    type: 'linear' as const,
+                    display: true,
+                    position: 'right' as const,
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Percentual (%)',
+                    },
+                    grid: {
+                      drawOnChartArea: false,
+                    },
+                    ticks: {
+                      callback: (value: any) => `${value}%`,
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <div className="w-3 h-3 bg-green-600 rounded"></div>
+                <p className="text-sm text-green-600 font-medium">Receitas</p>
+              </div>
+              <p className="text-xs text-green-700">Total de entradas no período</p>
+            </div>
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <div className="w-3 h-3 bg-red-600 rounded"></div>
+                <p className="text-sm text-red-600 font-medium">Despesas</p>
+              </div>
+              <p className="text-xs text-red-700">Total de saídas no período</p>
+            </div>
+            <div className="text-center p-3 bg-indigo-50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <div className="w-3 h-3 bg-indigo-600 rounded dashed"></div>
+                <p className="text-sm text-indigo-600 font-medium">% Receita/Despesa</p>
+              </div>
+              <p className="text-xs text-indigo-700">Proporção entre valores</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top 5 Gastos por Categoria */}
+      {dashboard && (
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+
+          {/* Gráfico de Barras - Top 5 Gastos */}
+          {dashboard.top5GastosCategorias && dashboard.top5GastosCategorias.length > 0 && (
+            <div className="card">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">📊 Top 5 Gastos por Categoria</h2>
+              <p className="text-sm text-gray-600 mb-4">Categorias com maiores despesas</p>
+              <div style={{ height: '300px' }}>
+                <Bar
+                  data={{
+                    labels: dashboard.top5GastosCategorias.map(item => item.nome),
+                    datasets: [
+                      {
+                        label: 'Valor Gasto',
+                        data: dashboard.top5GastosCategorias.map(item => item.valor),
+                        backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                        borderColor: 'rgb(79, 70, 229)',
+                        borderWidth: 1,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                      legend: {
+                        display: false,
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (context: any) => formatCurrency(context.parsed.x),
+                        },
+                      },
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        ticks: {
+                          callback: (value: any) => formatCurrency(value),
+                        },
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

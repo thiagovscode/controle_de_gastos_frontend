@@ -58,6 +58,11 @@ export const metasService = {
     return response.data;
   },
 
+  atualizar: async (uid: string, data: MetaCofreForm): Promise<MetaCofre> => {
+    const response = await api.put(`/metas-cofre/${uid}`, data);
+    return response.data;
+  },
+
   depositar: async (uid: string, valor: number, observacao?: string): Promise<MetaCofre> => {
     const response = await api.post(`/metas-cofre/${uid}/depositar`, {
       valor,
