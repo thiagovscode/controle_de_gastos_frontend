@@ -8,6 +8,7 @@ import Cartoes from './pages/Cartoes';
 import Categorias from './pages/Categorias';
 import Tags from './pages/Tags';
 import Recorrencias from './pages/Recorrencias';
+import ComprasParceladas from './pages/ComprasParceladas';
 import Profile from './pages/Profile';
 import Config from './pages/Config';
 import CategorizadorAutomatico from './pages/CategorizadorAutomatico';
@@ -83,6 +84,16 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <Recorrencias />
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/compras-parceladas"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <ComprasParceladas />
               </Layout>
             </PrivateRoute>
           }

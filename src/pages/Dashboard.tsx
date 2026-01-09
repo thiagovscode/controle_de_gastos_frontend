@@ -85,7 +85,7 @@ const DashboardPage: React.FC = () => {
       setDashboard(dashData);
       setSaldo(saldoData.saldo);
       setCategorias(categoriasData);
-      setTendencia(tendenciaData);
+      setTendencia(Array.isArray(tendenciaData) ? tendenciaData : []);
       setGastosInvisiveis(invisiveisData);
       setListaCategories(categoriasLista.filter((c: Categoria) => c.tipo === 'Despesa'));
       setListaTags(tagsLista);
@@ -133,19 +133,21 @@ const DashboardPage: React.FC = () => {
       let totalRecorrente = 0;
       let totalParcelada = 0;
 
-      // Calcular parceladas para este mês (com filtros)
-      parceladas
-        .filter((p: any) => {
-          const dataTransacao = new Date(p.data);
-          return dataTransacao.getMonth() === data.getMonth() &&
-                 dataTransacao.getFullYear() === data.getFullYear();
-        })
-        .forEach((p: any) => {
-          if (categoriaFiltro && p.categoriaUid !== categoriaFiltro) return;
-          if (tagFiltro && !p.tags?.some((t: any) => t.uid === tagFiltro)) return;
+      // Calcular total de compras parceladas (dividindo o valorPendente pelos meses futuros)
+      parceladas.forEach((p: any) => {
+        // Aplicar filtros
+        if (categoriaFiltro && p.categoriaUid !== categoriaFiltro) return;
+        if (tagFiltro && !p.tags?.some((t: string) => t === tagFiltro)) return;
 
-          totalParcelada += p.valorPendente || 0;
-        });
+        // Para cada compra parcelada, distribuir o valorPendente pelos meses restantes
+        const parcelasRestantes = p.totalParcelas - p.parcelaAtual;
+        if (parcelasRestantes > 0 && i < parcelasRestantes) {
+          totalParcelada += p.valorParcela || 0;
+        }
+      });
+
+      // TODO: Adicionar cálculo de recorrentes quando implementado
+      // recorrentes.forEach(...)
 
       projecaoRec.push({ mes: mesAno, valor: totalRecorrente });
       projecaoPar.push({ mes: mesAno, valor: totalParcelada });
@@ -188,11 +190,11 @@ const DashboardPage: React.FC = () => {
 
   // Configuração do gráfico de tendência
   const chartData = {
-    labels: tendencia.map(t => t.periodo),
+    labels: (tendencia || []).map(t => t.periodo),
     datasets: [
       {
         label: 'Gastos Mensais',
-        data: tendencia.map(t => t.total),
+        data: (tendencia || []).map(t => t.total),
         borderColor: 'rgb(79, 70, 229)',
         backgroundColor: 'rgba(79, 70, 229, 0.1)',
         fill: true,

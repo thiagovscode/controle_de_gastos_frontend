@@ -22,6 +22,19 @@ export interface TendenciaGasto {
   total: number;
 }
 
+export interface TendenciaGastosResponse {
+  periodo: string;
+  totalDespesas: number;
+  totalReceitas: number;
+  saldo: number;
+  variacao: number;
+  pontos: Array<{
+    data: string;
+    receita: number;
+    despesa: number;
+  }>;
+}
+
 export interface GastoInvisivel {
   quantidade: number;
   valorTotal: number;
@@ -50,8 +63,13 @@ export const analisesService = {
     const params = new URLSearchParams();
     if (ano) params.append('ano', ano.toString());
     if (mes) params.append('mes', mes.toString());
-    const response = await api.get(`/analises/tendencia-gastos?${params}`);
-    return response.data;
+    const response = await api.get<TendenciaGastosResponse>(`/analises/tendencia-gastos?${params}`);
+
+    // Converter os pontos do backend para o formato esperado pelo frontend
+    return (response.data.pontos || []).map(ponto => ({
+      periodo: ponto.data,
+      total: ponto.despesa
+    }));
   },
 
   gastosInvisiveis: async (ano?: number, mes?: number, limiteValor: number = 20): Promise<GastoInvisivel> => {

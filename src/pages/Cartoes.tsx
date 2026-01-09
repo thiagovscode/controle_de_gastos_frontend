@@ -156,19 +156,19 @@ const Cartoes: React.FC = () => {
                   <div className="pt-3 border-t border-gray-200">
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-600">Limite Usado:</span>
-                      <span className={`font-medium ${cartao.limiteInfo.percentualUsado > 80 ? 'text-red-600' : 'text-green-600'}`}>
-                        {cartao.limiteInfo.percentualUsado.toFixed(0)}%
+                      <span className={`font-medium ${(cartao.limiteInfo.percentualUsado || 0) > 80 ? 'text-red-600' : 'text-green-600'}`}>
+                        {(cartao.limiteInfo.percentualUsado || 0).toFixed(0)}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full ${cartao.limiteInfo.percentualUsado > 80 ? 'bg-red-500' : 'bg-green-500'}`}
-                        style={{ width: `${Math.min(cartao.limiteInfo.percentualUsado, 100)}%` }}
+                        className={`h-2 rounded-full ${(cartao.limiteInfo.percentualUsado || 0) > 80 ? 'bg-red-500' : 'bg-green-500'}`}
+                        style={{ width: `${Math.min(cartao.limiteInfo.percentualUsado || 0, 100)}%` }}
                       ></div>
                     </div>
                     <div className="flex justify-between text-xs text-gray-600 mt-1">
-                      <span>R$ {cartao.limiteInfo.valorComprometido.toFixed(2).replace('.', ',')}</span>
-                      <span>Disponível: R$ {cartao.limiteInfo.limiteDisponivel.toFixed(2).replace('.', ',')}</span>
+                      <span>R$ {(cartao.limiteInfo.valorComprometido || 0).toFixed(2).replace('.', ',')}</span>
+                      <span>Disponível: R$ {(cartao.limiteInfo.limiteDisponivel || 0).toFixed(2).replace('.', ',')}</span>
                     </div>
                   </div>
 

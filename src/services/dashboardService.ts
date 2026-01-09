@@ -30,5 +30,14 @@ export const dashboardService = {
   deletarMeta: async (uid: string): Promise<void> => {
     await api.delete(`/dashboard/metas/${uid}`);
   },
+
+  getResumoDashboard: async (ano?: number, mes?: number) => {
+    const params = new URLSearchParams();
+    if (ano) params.append('ano', ano.toString());
+    if (mes) params.append('mes', mes.toString());
+
+    const response = await api.get(`/dashboard/resumo?${params}`);
+    return response.data;
+  },
 };
 

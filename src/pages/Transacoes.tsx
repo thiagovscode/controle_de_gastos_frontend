@@ -82,6 +82,15 @@ const Transacoes: React.FC = () => {
     }
   };
 
+  const handleToggleOculta = async (uid: string, ocultar: boolean) => {
+    try {
+      await transacaoService.toggleOcultar(uid, ocultar);
+      loadData();
+    } catch (error) {
+      console.error('Erro ao ocultar/exibir transação:', error);
+    }
+  };
+
   const handleEdit = (transacao: Transacao) => {
     setEditingTransacao(transacao);
     setFormData({

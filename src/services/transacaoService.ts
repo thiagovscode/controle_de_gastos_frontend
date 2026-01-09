@@ -60,5 +60,15 @@ export const transacaoService = {
   toggleOcultar: async (uid: string, ocultar: boolean): Promise<void> => {
     await api.patch(`/transacoes/${uid}/ocultar?ocultar=${ocultar}`);
   },
+
+  getSaldo: async () => {
+    const response = await api.get('/transacoes/saldo');
+    return response.data;
+  },
+
+  getComprasPendentes: async () => {
+    const response = await api.get('/transacoes/pendentes');
+    return response.data;
+  },
 };
 
