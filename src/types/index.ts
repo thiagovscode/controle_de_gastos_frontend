@@ -48,6 +48,7 @@ export interface Transacao {
   valor: number;
   valorFormatado?: string;
   data: string;
+  dataCriacao?: string; // Data de criação/importação da transação
   descricao?: string;
   categoria: Categoria;
   tags?: Tag[];
@@ -61,6 +62,7 @@ export interface Transacao {
 export interface TransacaoRequest {
   valor: number;
   data: string;
+  dataCriacao?: string; // Data de criação/importação (opcional, padrão: data atual)
   descricao?: string;
   categoriaUid: string;
   tagUids?: string[];

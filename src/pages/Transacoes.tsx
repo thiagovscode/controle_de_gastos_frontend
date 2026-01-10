@@ -17,6 +17,11 @@ const Transacoes: React.FC = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  // Estados para seleção em lote
+  const [transacoesSelecionadas, setTransacoesSelecionadas] = useState<string[]>([]);
+  const [showBulkTagModal, setShowBulkTagModal] = useState(false);
+  const [bulkSelectedTags, setBulkSelectedTags] = useState<string[]>([]);
+
   // Estados de filtro
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroCartao, setFiltroCartao] = useState('');
@@ -26,6 +31,7 @@ const Transacoes: React.FC = () => {
   const [filtroDataFim, setFiltroDataFim] = useState('');
   const [filtroDescricao, setFiltroDescricao] = useState('');
   const [showOcultas, setShowOcultas] = useState(false);
+  const [filtroVisualizacao, setFiltroVisualizacao] = useState<'ativas' | 'ocultas' | 'todas'>('ativas');
 
   // Transações filtradas
   const [transacoesFiltradas, setTransacoesFiltradas] = useState<Transacao[]>([]);
@@ -33,6 +39,7 @@ const Transacoes: React.FC = () => {
   const [formData, setFormData] = useState<TransacaoRequest>({
     valor: 0,
     data: format(new Date(), 'yyyy-MM-dd'),
+    dataCriacao: format(new Date(), 'yyyy-MM-dd'), // Data de criação padrão: hoje
     categoriaUid: '',
     descricao: '',
     cartaoUid: undefined,
@@ -45,7 +52,7 @@ const Transacoes: React.FC = () => {
 
   useEffect(() => {
     aplicarFiltros();
-  }, [transacoes, filtroCategoria, filtroCartao, filtroTag, filtroTipo, filtroDataInicio, filtroDataFim, filtroDescricao, showOcultas]);
+  }, [transacoes, filtroCategoria, filtroCartao, filtroTag, filtroTipo, filtroDataInicio, filtroDataFim, filtroDescricao]);
 
   const aplicarFiltros = () => {
     let filtradas = [...transacoes];
@@ -87,10 +94,7 @@ const Transacoes: React.FC = () => {
       filtradas = filtradas.filter(t => new Date(t.data) <= new Date(filtroDataFim));
     }
 
-    // Filtro de transações ocultas
-    if (!showOcultas) {
-      filtradas = filtradas.filter(t => !t.oculta);
-    }
+    // Nota: O filtro de ocultas agora é feito pelo backend via API
 
     setTransacoesFiltradas(filtradas);
   };
@@ -106,11 +110,11 @@ const Transacoes: React.FC = () => {
     setShowOcultas(false);
   };
 
-  const loadData = async () => {
+  const loadData = async (oculta?: boolean) => {
     try {
       setLoading(true);
       const [transacoesData, categoriasData, cartoesData, tagsData] = await Promise.all([
-        transacaoService.listar(),
+        transacaoService.listar(oculta),
         categoriaService.listar(),
         cartaoService.listar(),
         tagService.listar(),
@@ -185,6 +189,7 @@ const Transacoes: React.FC = () => {
     setFormData({
       valor: 0,
       data: format(new Date(), 'yyyy-MM-dd'),
+      dataCriacao: format(new Date(), 'yyyy-MM-dd'), // Reset para data atual
       categoriaUid: '',
       descricao: '',
       cartaoUid: undefined,
@@ -194,17 +199,55 @@ const Transacoes: React.FC = () => {
     setEditingTransacao(null);
   };
 
+  // Handlers para seleção em lote
+  const handleSelectTransacao = (uid: string) => {
+    setTransacoesSelecionadas(prev =>
+      prev.includes(uid)
+        ? prev.filter(id => id !== uid)
+        : [...prev, uid]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (transacoesSelecionadas.length === transacoesFiltradas.length) {
+      setTransacoesSelecionadas([]);
+    } else {
+      setTransacoesSelecionadas(transacoesFiltradas.map(t => t.uuid));
+    }
+  };
+
+  const handleBulkAddTags = async () => {
+    if (bulkSelectedTags.length === 0) {
+      alert('Selecione pelo menos uma tag');
+      return;
+    }
+
+    try {
+      await transacaoService.adicionarTagsEmLote(transacoesSelecionadas, bulkSelectedTags);
+      setShowBulkTagModal(false);
+      setBulkSelectedTags([]);
+      setTransacoesSelecionadas([]);
+      loadData();
+      alert('Tags adicionadas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar tags em lote:', error);
+      alert('Erro ao adicionar tags');
+    }
+  };
+
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fileInput = form.querySelector('input[type="file"]') as HTMLInputElement;
     const cartaoSelect = form.querySelector('select') as HTMLSelectElement;
+    const dataCriacaoInput = form.querySelector('input[name="dataCriacao"]') as HTMLInputElement;
 
     if (fileInput.files && fileInput.files[0]) {
       try {
         await transacaoService.importarCSV(
           fileInput.files[0],
-          cartaoSelect.value || undefined
+          cartaoSelect.value || undefined,
+          dataCriacaoInput.value || undefined
         );
         setShowImportModal(false);
         loadData();
@@ -231,6 +274,14 @@ const Transacoes: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Transações</h1>
         <div className="flex gap-2">
+          {transacoesSelecionadas.length > 0 && (
+            <button
+              onClick={() => setShowBulkTagModal(true)}
+              className="btn-secondary"
+            >
+              Adicionar Tags ({transacoesSelecionadas.length})
+            </button>
+          )}
           <button
             onClick={() => setShowImportModal(true)}
             className="btn-secondary"
@@ -238,10 +289,7 @@ const Transacoes: React.FC = () => {
             Importar CSV
           </button>
           <button
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
+            onClick={() => setShowModal(true)}
             className="btn-primary"
           >
             Nova Transação
@@ -360,6 +408,27 @@ const Transacoes: React.FC = () => {
               className="input-field"
             />
           </div>
+
+          {/* Filtro Visualização (Ocultas/Ativas) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Visualização
+            </label>
+            <select
+              value={filtroVisualizacao}
+              onChange={(e) => {
+                const value = e.target.value as 'ativas' | 'ocultas' | 'todas';
+                setFiltroVisualizacao(value);
+                const oculta = value === 'ocultas' ? true : value === 'ativas' ? false : undefined;
+                loadData(oculta);
+              }}
+              className="input-field"
+            >
+              <option value="ativas">Apenas Ativas</option>
+              <option value="ocultas">Apenas Ocultas</option>
+              <option value="todas">Todas</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -369,8 +438,19 @@ const Transacoes: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={transacoesSelecionadas.length === transacoesFiltradas.length && transacoesFiltradas.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Data
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Data de Criação
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Descrição
@@ -398,6 +478,14 @@ const Transacoes: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {transacoesFiltradas.map((transacao) => (
                 <tr key={transacao.uuid} className={`hover:bg-gray-50 ${transacao.oculta ? 'bg-gray-100 opacity-60' : ''}`}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={transacoesSelecionadas.includes(transacao.uuid)}
+                      onChange={() => handleSelectTransacao(transacao.uuid)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {format(new Date(transacao.data), 'dd/MM/yyyy')}
                     {transacao.oculta && (
@@ -405,6 +493,11 @@ const Transacoes: React.FC = () => {
                         Oculta
                       </span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {transacao.dataCriacao
+                      ? format(new Date(transacao.dataCriacao), 'dd/MM/yyyy')
+                      : '-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {transacao.descricao || '-'}
@@ -511,6 +604,22 @@ const Transacoes: React.FC = () => {
                   className="input-field"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data de Criação
+                </label>
+                <input
+                  type="date"
+                  value={formData.dataCriacao}
+                  onChange={(e) => setFormData({ ...formData, dataCriacao: e.target.value })}
+                  className="input-field"
+                  title="Data em que a transação foi registrada no sistema (padrão: hoje)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Define o mês de agrupamento nos relatórios (padrão: data atual)
+                </p>
               </div>
 
               <div>
@@ -690,6 +799,22 @@ const Transacoes: React.FC = () => {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data de Criação
+                </label>
+                <input
+                  type="date"
+                  name="dataCriacao"
+                  defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                  className="input-field"
+                  title="Data em que as transações serão registradas no sistema (padrão: hoje)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Define o mês de agrupamento nos gráficos e limite do cartão
+                </p>
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <button type="submit" className="btn-primary flex-1">
                   Importar
@@ -703,6 +828,61 @@ const Transacoes: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Tags em Lote */}
+      {showBulkTagModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Adicionar Tags em Lote
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {transacoesSelecionadas.length} transação(ões) selecionada(s)
+            </p>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+              {tags.map((tag) => (
+                <label
+                  key={tag.uid}
+                  className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={bulkSelectedTags.includes(tag.uid)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setBulkSelectedTags([...bulkSelectedTags, tag.uid]);
+                      } else {
+                        setBulkSelectedTags(bulkSelectedTags.filter(id => id !== tag.uid));
+                      }
+                    }}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">{tag.nome}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkAddTags}
+                className="btn-primary flex-1"
+              >
+                Adicionar Tags
+              </button>
+              <button
+                onClick={() => {
+                  setShowBulkTagModal(false);
+                  setBulkSelectedTags([]);
+                }}
+                className="btn-secondary flex-1"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,8 +2,13 @@ import api from './api';
 import { Transacao, TransacaoRequest } from '../types';
 
 export const transacaoService = {
-  listar: async (): Promise<Transacao[]> => {
-    const response = await api.get('/transacoes');
+  listar: async (oculta?: boolean): Promise<Transacao[]> => {
+    const params = new URLSearchParams();
+    if (oculta !== undefined) {
+      params.append('oculta', oculta.toString());
+    }
+    const url = params.toString() ? `/transacoes?${params}` : '/transacoes';
+    const response = await api.get(url);
     return response.data;
   },
 
@@ -45,10 +50,11 @@ export const transacaoService = {
     return response.data;
   },
 
-  importarCSV: async (arquivo: File, cartaoUid?: string): Promise<void> => {
+  importarCSV: async (arquivo: File, cartaoUid?: string, dataCriacao?: string): Promise<void> => {
     const formData = new FormData();
     formData.append('arquivo', arquivo);
     if (cartaoUid) formData.append('cartaoUid', cartaoUid);
+    if (dataCriacao) formData.append('dataCriacao', dataCriacao);
 
     await api.post('/transacoes/importacao', formData, {
       headers: {
@@ -69,6 +75,13 @@ export const transacaoService = {
   getComprasPendentes: async () => {
     const response = await api.get('/transacoes/pendentes');
     return response.data;
+  },
+
+  adicionarTagsEmLote: async (transacoesUids: string[], tagsUids: string[]): Promise<void> => {
+    await api.post('/transacoes/tags/adicionar-em-lote', {
+      transacoesUids,
+      tagsUids
+    });
   },
 };
 
